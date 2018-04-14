@@ -20,11 +20,11 @@ X_train_array = X_train_tfidf.toarray()
 y_train = newsgroups_train.target
 
 # Preprocess test data
-X_test_counts = count_vect.fit_transform(newsgroups_test.data)
-X_test_tfidf = tfidf_transformer.fit_transform(X_test_counts)
+#X_test_counts = count_vect.fit_transform(newsgroups_test.data)
+#X_test_tfidf = tfidf_transformer.fit_transform(X_test_counts)
 
-X_test_array = X_test_tfidf.toarray()
-y_test = newsgroups_test.target
+#X_test_array = X_test_tfidf.toarray()
+#y_test = newsgroups_test.target
 
 # Make dataframes from input
 dnn_feature_columns = []
@@ -36,12 +36,12 @@ X_train_dataframe = pd.DataFrame(
     columns=dnn_feature_columns
 )
 
-print(X_test_array.shape)
-'''
-X_test_dataframe = pd.DataFrame(
-    data=X_test_array,
-    columns=dnn_feature_columns
-)
+#print(X_test_array.shape)
+
+#X_test_dataframe = pd.DataFrame(
+#    data=X_test_array,
+#    columns=dnn_feature_columns
+#)
 
 # print(df.head())
 
@@ -94,9 +94,8 @@ dnn_classifier.train(
     steps=1000
 )
 
-eval_result = dnn_classifier.evaluate(
-    input_fn=lambda:eval_input_fn(X_test_dataframe, y_test, 16)
-)
+#eval_result = dnn_classifier.evaluate(
+#    input_fn=lambda:eval_input_fn(X_test_dataframe, y_test, 16)
+#)
 
-print('\nTest set accuracy: {accuracy:0.3f}\n'.format(**eval_result))
-'''
+#print('\nTest set accuracy: {accuracy:0.3f}\n'.format(**eval_result))
