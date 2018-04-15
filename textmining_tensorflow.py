@@ -48,19 +48,21 @@ features_number = X_train_array.shape[1]
 sess = tf.Session()
 
 # Starting logistic regression
-A = tf.Variable(tf.random_normal(shape=[features_number, 1]))
-b = tf.Variable(tf.random_normal(shape=[1, 1]))
+A = tf.Variable(tf.random_normal(shape=[features_number, 1]), name="weights")
+b = tf.Variable(tf.random_normal(shape=[1, 1]), name="bias")
 
-x_data = tf.placeholder(shape=[None, features_number], dtype=tf.float32)
-y_target = tf.placeholder(shape=[None, 1], dtype=tf.float32)
+x_data = tf.placeholder(shape=[None, features_number], dtype=tf.float32, name="X_data")
+y_target = tf.placeholder(shape=[None, 1], dtype=tf.float32, name="y_data")
 
 model_output = tf.add(tf.matmul(x_data, A), b)
 
 loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=model_output, labels=y_target))
+tf.summary.scalar('loss', loss)
 
 prediction = tf.round(tf.sigmoid(model_output))
 predictions_correct = tf.cast(tf.equal(prediction, y_target), tf.float32)
 accuracy = tf.reduce_mean(predictions_correct)
+tf.summary.scalar('accuracy', accuracy)
 
 my_optimizer = tf.train.GradientDescentOptimizer(0.0025)
 train_step = my_optimizer.minimize(loss)
@@ -87,10 +89,12 @@ for i in range(1000):
 
     if (i+1)%100==0:
         i_data.append(i+1)
-        train_loss_temp = sess.run(loss, feed_dict={x_data: rand_x, y_target: rand_y})
+        summary, train_loss_temp = sess.run([merged, loss], feed_dict={x_data: rand_x, y_target: rand_y})
+        train_writer.add_summary(summary, i)
         train_loss.append(train_loss_temp)
         
-        train_acc_temp = sess.run(accuracy, feed_dict={x_data: rand_x, y_target: rand_y})
+        summary, train_acc_temp = sess.run([merged, accuracy], feed_dict={x_data: rand_x, y_target: rand_y})
+        train_writer.add_summary(summary, i)
         train_acc.append(train_acc_temp)
 
         acc_and_loss = [i+1, train_loss_temp, train_acc_temp]
