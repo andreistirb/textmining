@@ -27,14 +27,16 @@ y_train = newsgroups_train.target
 #y_test = newsgroups_test.target
 
 # Make dataframes from input
-dnn_feature_columns = []
-for key in range(0, X_train_array.shape[1]):
-    dnn_feature_columns.append("feature#" + str(key))
+#dnn_feature_columns = []
+#for key in range(0, X_train_array.shape[1]):
+#    dnn_feature_columns.append("feature#" + str(key))
 
-X_train_dataframe = pd.DataFrame(
-    data=X_train_array,
-    columns=dnn_feature_columns
-)
+features_number = X_train_array.shape[1]
+
+#X_train_dataframe = pd.DataFrame(
+#    data=X_train_array,
+#    columns=dnn_feature_columns
+#)
 
 #print(X_test_array.shape)
 
@@ -43,59 +45,56 @@ X_train_dataframe = pd.DataFrame(
 #    columns=dnn_feature_columns
 #)
 
-# print(df.head())
+sess = tf.Session()
 
-# Feed the data to the model
+# Starting logistic regression
+A = tf.Variable(tf.random_normal(shape=[features_number, 1]))
+b = tf.Variable(tf.random_normal(shape=[1, 1]))
 
-#### DNN Clasifier
+x_data = tf.placeholder(shape=[None, features_number], dtype=tf.float32)
+y_target = tf.placeholder(shape=[None, 1], dtype=tf.float32)
 
-def train_input_fn(features, labels, batch_size):
-    """An input function for training"""
-    # Convert the inputs to a Dataset.
-    dataset = tf.data.Dataset.from_tensor_slices((dict(features), labels))
+model_output = tf.add(tf.matmul(x_data, A), b)
 
-    # Shuffle, repeat, and batch the examples.
-    dataset = dataset.shuffle(1000).repeat().batch(batch_size)
+loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=model_output, labels=y_target))
 
-    # Return the dataset.
-    return dataset
+prediction = tf.round(tf.sigmoid(model_output))
+predictions_correct = tf.cast(tf.equal(prediction, y_target), tf.float32)
+accuracy = tf.reduce_mean(predictions_correct)
 
-def eval_input_fn(features, labels, batch_size):
-    """An input function for evaluation or prediction"""
-    features=dict(features)
-    if labels is None:
-        # No labels, use only features.
-        inputs = features
-    else:
-        inputs = (features, labels)
+my_optimizer = tf.train.GradientDescentOptimizer(0.0025)
+train_step = my_optimizer.minimize(loss)
 
-    # Convert the inputs to a Dataset.
-    dataset = tf.data.Dataset.from_tensor_slices(inputs)
+init = tf.global_variables_initializer()
 
-    # Batch the examples
-    assert batch_size is not None, "batch_size must not be None"
-    dataset = dataset.batch(batch_size)
+sess.run(init)
 
-    # Return the dataset.
-    return dataset
+# Start logistic regression
+train_loss = []
+train_acc = []
+i_data = []
 
-dnn_feature_columns_tf = []
-for key in range(0, X_train_array.shape[1]):
-    dnn_feature_columns_tf.append(tf.feature_column.numeric_column(key=key))
+train_writer = tf.summary.FileWriter('graph', sess.graph)
+merged = tf.summary.merge_all()
 
-dnn_classifier = tf.estimator.DNNClassifier(
-    feature_columns=dnn_feature_columns_tf,
-    hidden_units=[10, 10],
-    n_classes=len(newsgroups_train.target_names)
-)
+for i in range(1000):
+    rand_index = np.random.choice(X_train_tfidf.shape[0], size=64)
+    rand_x = X_train_tfidf[rand_index].todense()
+    rand_y = np.transpose([y_train[rand_index]])
 
-dnn_classifier.train(
-    input_fn=lambda:train_input_fn(X_train_dataframe, y_train, 16),
-    steps=1000
-)
+    summary, _ = sess.run([merged, train_step], feed_dict={x_data: rand_x, y_target: rand_y})
+    train_writer.add_summary(summary, i)
 
-#eval_result = dnn_classifier.evaluate(
-#    input_fn=lambda:eval_input_fn(X_test_dataframe, y_test, 16)
-#)
+    if (i+1)%100==0:
+        i_data.append(i+1)
+        train_loss_temp = sess.run(loss, feed_dict={x_data: rand_x, y_target: rand_y})
+        train_loss.append(train_loss_temp)
+        
+        train_acc_temp = sess.run(accuracy, feed_dict={x_data: rand_x, y_target: rand_y})
+        train_acc.append(train_acc_temp)
 
-#print('\nTest set accuracy: {accuracy:0.3f}\n'.format(**eval_result))
+        acc_and_loss = [i+1, train_loss_temp, train_acc_temp]
+        acc_and_loss = [np.round(x,2) for x in acc_and_loss]
+        print('Generation # {}. Train Loss: {:.2f}. Train Acc: {:.2f}'.format(*acc_and_loss))
+
+
