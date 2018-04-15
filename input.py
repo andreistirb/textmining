@@ -1,5 +1,6 @@
 # Format input for the models
 # TO-DO: make this an object in order to preserve the countVectorizer for new text input by the user
+# TO-DO: function to return batches from dataset in a more easy way
 
 import numpy as np
 from sklearn.datasets import fetch_20newsgroups
