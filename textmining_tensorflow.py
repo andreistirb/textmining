@@ -1,70 +1,69 @@
 import tensorflow as tf
 import numpy as np
-import pandas as pd
-from sklearn.datasets import fetch_20newsgroups
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
+import input 
 
-# Download data
-newsgroups_train = fetch_20newsgroups(subset='train')
-newsgroups_test = fetch_20newsgroups(subset='test')
+X_train_tfidf, y_train, X_test_tfidf, y_test = input.preprocess_data()
 
-# Preprocess train data
-count_vect = CountVectorizer(stop_words='english')
-X_train_counts = count_vect.fit_transform(newsgroups_train.data)
-
-tfidf_transformer = TfidfTransformer()
-X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
-
-X_train_array = X_train_tfidf.toarray()
-y_train = newsgroups_train.target
-
-# Preprocess test data
-#X_test_counts = count_vect.fit_transform(newsgroups_test.data)
-#X_test_tfidf = tfidf_transformer.fit_transform(X_test_counts)
-
-#X_test_array = X_test_tfidf.toarray()
-#y_test = newsgroups_test.target
-
-# Make dataframes from input
-#dnn_feature_columns = []
-#for key in range(0, X_train_array.shape[1]):
-#    dnn_feature_columns.append("feature#" + str(key))
-
-features_number = X_train_array.shape[1]
-
-#X_train_dataframe = pd.DataFrame(
-#    data=X_train_array,
-#    columns=dnn_feature_columns
-#)
-
-#print(X_test_array.shape)
-
-#X_test_dataframe = pd.DataFrame(
-#    data=X_test_array,
-#    columns=dnn_feature_columns
-#)
+targets_number = 20#len(newsgroups_train.target_names)
+features_number = X_train_tfidf.shape[1]
 
 sess = tf.Session()
-
-# Starting logistic regression
-A = tf.Variable(tf.random_normal(shape=[features_number, 1]), name="weights")
-b = tf.Variable(tf.random_normal(shape=[1, 1]), name="bias")
-
 x_data = tf.placeholder(shape=[None, features_number], dtype=tf.float32, name="X_data")
-y_target = tf.placeholder(shape=[None, 1], dtype=tf.float32, name="y_data")
+y_target = tf.placeholder(tf.int64, [None], name="y_data")
 
-model_output = tf.add(tf.matmul(x_data, A), b)
+# Starting the model
+def weight_variable(shape):
+    """Create a weight variable with appropriate initialization."""
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
 
-loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=model_output, labels=y_target))
+def bias_variable(shape):
+    """Create a bias variable with appropriate initialization."""
+    initial = tf.constant(0.1, shape=shape)
+    return tf.Variable(initial)
+
+def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
+    """Reusable code for making a simple neural net layer.
+
+    It does a matrix multiply, bias add, and then uses ReLU to nonlinearize.
+    It also sets up name scoping so that the resultant graph is easy to read,
+    and adds a number of summary ops.
+    """
+    # Adding a name scope ensures logical grouping of the layers in the graph.
+    with tf.name_scope(layer_name):
+      # This Variable will hold the state of the weights for the layer
+      with tf.name_scope('weights'):
+        weights = weight_variable([input_dim, output_dim])
+        #variable_summaries(weights)
+      with tf.name_scope('biases'):
+        biases = bias_variable([output_dim])
+        #variable_summaries(biases)
+      with tf.name_scope('Wx_plus_b'):
+        preactivate = tf.matmul(input_tensor, weights) + biases
+        tf.summary.histogram('pre_activations', preactivate)
+      activations = act(preactivate, name='activation')
+      tf.summary.histogram('activations', activations)
+
+      print(activations.shape)
+      print("ACTIVATIONSSSS")
+      return activations
+
+hidden1 = nn_layer(x_data, features_number, 500, 'layer1')
+
+dropped = tf.nn.dropout(hidden1, 0.9)
+model_output = nn_layer(dropped, 500, targets_number, 'layer2', act=tf.identity)
+
+# Starting things adjacent to the model (loss, etc)
+
+loss = tf.losses.sparse_softmax_cross_entropy(logits=model_output, labels=y_target)
 tf.summary.scalar('loss', loss)
 
-prediction = tf.round(tf.sigmoid(model_output))
-predictions_correct = tf.cast(tf.equal(prediction, y_target), tf.float32)
-accuracy = tf.reduce_mean(predictions_correct)
+prediction = tf.argmax(model_output, 1)
+predictions_correct = tf.equal(prediction, y_target)
+accuracy = tf.reduce_mean(tf.cast(predictions_correct, tf.float32))
 tf.summary.scalar('accuracy', accuracy)
 
-my_optimizer = tf.train.GradientDescentOptimizer(0.0025)
+my_optimizer = tf.train.AdamOptimizer(0.001)
 train_step = my_optimizer.minimize(loss)
 
 init = tf.global_variables_initializer()
@@ -80,9 +79,9 @@ train_writer = tf.summary.FileWriter('graph', sess.graph)
 merged = tf.summary.merge_all()
 
 for i in range(1000):
-    rand_index = np.random.choice(X_train_tfidf.shape[0], size=64)
-    rand_x = X_train_tfidf[rand_index].todense()
-    rand_y = np.transpose([y_train[rand_index]])
+    rand_index = np.random.choice(X_train_tfidf.shape[0], size=128)
+    rand_x = X_train_tfidf[rand_index].todense()#.toarray()#.todense()
+    rand_y = np.transpose(y_train[rand_index])
 
     summary, _ = sess.run([merged, train_step], feed_dict={x_data: rand_x, y_target: rand_y})
     train_writer.add_summary(summary, i)
@@ -92,6 +91,12 @@ for i in range(1000):
         summary, train_loss_temp = sess.run([merged, loss], feed_dict={x_data: rand_x, y_target: rand_y})
         train_writer.add_summary(summary, i)
         train_loss.append(train_loss_temp)
+
+        prediction_array = sess.run(prediction, feed_dict={x_data: rand_x, y_target: rand_y})
+        print("Prediction: ")
+        print(prediction_array)
+        print("targets")
+        print(rand_y)
         
         summary, train_acc_temp = sess.run([merged, accuracy], feed_dict={x_data: rand_x, y_target: rand_y})
         train_writer.add_summary(summary, i)
