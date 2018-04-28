@@ -73,7 +73,7 @@ merged = tf.summary.merge_all()
 
 for i in range(10000):
     rand_index = np.random.choice(X_train_tfidf.shape[0], size=batch_size)
-    rand_x = X_train_tfidf[rand_index].todense()#.toarray()#.todense()
+    rand_x = X_train_tfidf[rand_index].todense()
     rand_y = np.transpose(y_train[rand_index])
 
     rand_index_test = np.random.choice(X_test_tfidf.shape[0], size=batch_size)
