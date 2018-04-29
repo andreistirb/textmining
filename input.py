@@ -22,16 +22,15 @@ def preprocess_data():
     try:
         count_vect = joblib.load("tools/count_vect.pkl")
         X_train_counts = count_vect.transform(newsgroups_train.data)
-        print("Count vector restored")
+        # print("Count vector restored")
     except:
-        print("bla bla bla")
         count_vect = CountVectorizer(stop_words='english')
         X_train_counts = count_vect.fit_transform(newsgroups_train.data)
         joblib.dump(count_vect, "tools/count_vect.pkl")
     try:
         tfidf_transformer = joblib.load("tools/tfidf_transformer.pkl")
         X_train_tfidf = tfidf_transformer.transform(X_train_counts)
-        print("tfidf transformer restored")
+        #print("tfidf transformer restored")
     except:
         tfidf_transformer = TfidfTransformer()
         X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
@@ -45,4 +44,5 @@ def preprocess_data():
 
     y_test = newsgroups_test.target
 
+    # print(X_train_tfidf.shape)
     return X_train_tfidf, y_train, X_test_tfidf, y_test

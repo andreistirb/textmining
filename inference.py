@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model", help="What model should I use for inference? Available options: random_forest/mlp")
 parser.add_argument("--text_file", help="path the text file")
 parser.add_argument("--scikit_model", help="path to saved scikit model (random forests)")
-#parser.add_argument("--labels", help="name of file containing labels")
+parser.add_argument("--tensorflow_model", help="path to saved tensorflow model (MLP)")
 #parser.add_argument("--input_height", type=int, help="input height")
 #parser.add_argument("--input_width", type=int, help="input width")
 #parser.add_argument("--input_mean", type=int, help="input mean")
@@ -40,7 +40,9 @@ parser.add_argument("--scikit_model", help="path to saved scikit model (random f
 args = parser.parse_args()
 
 random_forest_model_file = "random_forest_model.pkl"
+tensorflow_model_directory = "./tensorflow_model/"
 text_file = "test_textfile.txt"
+
 
 if args.text_file:
     text_file = args.text_file
@@ -54,3 +56,15 @@ if args.model:
             features = preprocess_text(text_file)
             label = clf.predict(features)
             print(format_label(label[0]))
+    if model == "mlp":
+        if args.tensorflow_model: 
+            features = preprocess_text(text_file)
+            with tf.Session() as sess:
+                saver = tf.train.import_meta_graph(tensorflow_model_directory + 'mlp-1000.meta')
+                saver.restore(sess, tf.train.latest_checkpoint(tensorflow_model_directory))
+                graph = tf.get_default_graph()
+                x_data = graph.get_tensor_by_name("X_data:0")
+                prediction = graph.get_tensor_by_name("prediction:0")
+                label = sess.run(prediction, feed_dict={x_data: features.todense()})
+                #print(label[0])
+                print(format_label(label[0]))

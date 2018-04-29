@@ -13,3 +13,6 @@ https://towardsdatascience.com/machine-learning-nlp-text-classification-using-sc
 https://github.com/javedsha/text-classification
 
 https://nicolovaligi.com/naive-bayes-tensorflow.html
+
+Running inference: python.exe inference.py --model=random_forest --text_file="test_textfile.txt" --scikit_model="random_forest_model.pkl"
+python.exe inference.py --model=mlp --text_file="test_textfile.txt" --tensorflow_model="./tensorflow_model/"

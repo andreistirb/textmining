@@ -50,7 +50,7 @@ model_output = nn_layer(dropped, 100, targets_number, 'layer2', act=tf.identity)
 loss = tf.losses.sparse_softmax_cross_entropy(logits=model_output, labels=y_target)
 tf.summary.scalar('loss', loss)
 
-prediction = tf.argmax(model_output, 1)
+prediction = tf.argmax(model_output, 1, name="prediction")
 predictions_correct = tf.equal(prediction, y_target)
 accuracy = tf.reduce_mean(tf.cast(predictions_correct, tf.float32))
 tf.summary.scalar('accuracy', accuracy)
@@ -59,10 +59,10 @@ my_optimizer = tf.train.AdamOptimizer(0.001)
 train_step = my_optimizer.minimize(loss)
 
 init = tf.global_variables_initializer()
-
+saver = tf.train.Saver()
 sess.run(init)
 
-# Start logistic regression
+# Start model
 train_loss = []
 train_acc = []
 i_data = []
@@ -70,8 +70,9 @@ test_acc = []
 
 train_writer = tf.summary.FileWriter('graph', sess.graph)
 merged = tf.summary.merge_all()
+saver = tf.train.Saver()
 
-for i in range(10000):
+for i in range(1000):
     rand_index = np.random.choice(X_train_tfidf.shape[0], size=batch_size)
     rand_x = X_train_tfidf[rand_index].todense()
     rand_y = np.transpose(y_train[rand_index])
@@ -102,4 +103,14 @@ for i in range(10000):
         acc_and_loss = [np.round(x,2) for x in acc_and_loss]
         print('Generation # {}. Train Loss: {:.2f}. Train Acc: {:.2f} Test Acc: {:.2f}'.format(*acc_and_loss))
 
+# Test the model on the whole test set in order to compare with random forest
+print("Testing the model...")
+X_test = X_test_tfidf.todense()
+y_test = np.transpose(y_test)
+test_accuracy = sess.run(accuracy, feed_dict={x_data: X_test, y_target: y_test})
+print("Final accuracy: %f"%test_accuracy)
+
+#tf.saved_model.simple_save(sess, "tensorflow_model", inputs={"x": x_data}, outputs={"y": y_target} )
+print("Saving the model")
+saver.save(sess, './tensorflow_model/mlp', global_step=1000)
 
